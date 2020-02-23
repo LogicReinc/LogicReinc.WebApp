@@ -1,0 +1,25 @@
+﻿<html>
+<head>
+    <link rel="stylesheet" href="styles/roboto.css">
+    <link rel="stylesheet" href="styles/vue-material.min.css">
+    <link rel="stylesheet" href="styles/default.css">
+    <link rel="stylesheet" href="styles/Main.css" />
+</head>
+<body>
+    <div id="root" style="text-align: center; padding-top: 20px;">
+        <h2>Vue Testing</h2>
+        <h3>{{MyCounter}}</h3>
+        <md-button class="md-raised md-primary" @click="Increment()">
+            Increase
+        </md-button>
+        <!--<h4>{{TestString}}</h4>-->
+        <counter-comp></counter-comp>
+    </div>
+
+    <script src="scripts/vue.js"></script>
+    <script src="scripts/vue-material.min.js"></script>
+    <script>
+        //Vue.use(VueMaterial.default);
+    </script>
+</body>
+</html>

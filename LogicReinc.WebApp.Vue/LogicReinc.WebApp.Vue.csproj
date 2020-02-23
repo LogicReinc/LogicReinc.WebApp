@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Scripts\VueCoreComponent.Call.js" />
+    <None Remove="VueCore.js" />
+    <None Remove="VueCoreComponent.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Scripts\VueCore.js" />
+    <EmbeddedResource Include="Scripts\VueCoreComponent.Call.js" />
+    <EmbeddedResource Include="Scripts\VueCoreComponent.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LogicReinc.WebApp\LogicReinc.WebApp.csproj" />
+  </ItemGroup>
+
+</Project>
