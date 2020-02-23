@@ -101,6 +101,38 @@ Embedded Resource: TestApp.Web.Test.html
 With some more styling it could look like this on your desktop:
 ![example](https://github.com/LogicReinc/LogicReinc.WebApp/raw/master/assets/images/webappdemo.PNG)
 
+## Javascript Integration
+Javascript
+```javascript
+var testStructure = {
+	subFunction(){
+		Print("whatever");     
+	},
+	intVal : 123
+};
+function testFunction(str){
+	Print(str);  
+}
+DoSomething();
+```
+C#
+```C#
+public void DoSomething()
+{
+	JS.testFunction("someParameter");
+	JS.testStructure.subFunction();
+    JS.SomeValue = "Testing?";
+    JS.SomeObj = new Object();
+    JS.SomeObj.Str = "Whatever";
+	
+	string someValue = JS.SomeValue;
+	string someObjStr = JS.SomeObj.Str;
+	int testStrIntVal = JS.testStructure.intVal;
+	int windowWidth = JS.window.outerWidth;
+}
+```
+
+
 ## Vue Integration
 By referencing LogicReinc.WebApp.Vue you can utilize Vue exclusively through C#. Removing the need for javascript entirely. You do this by implementing the VueWindow instead.
 
