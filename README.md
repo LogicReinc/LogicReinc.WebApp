@@ -99,14 +99,14 @@ Embedded Resource: TestApp.Web.Test.html
 </html>
 ```
 With some more styling it could look like this on your desktop:
-![example](https://github.com/LogicReinc/LogicReinc.WebApp/raw/master/assets/images/webappdemo.png)
+![example](https://github.com/LogicReinc/LogicReinc.WebApp/raw/master/assets/images/webappdemo.PNG)
 
 ## Vue Integration
 By referencing LogicReinc.WebApp.Vue you can utilize Vue exclusively through C#. Removing the need for javascript entirely. You do this by implementing the VueWindow instead.
 
 No javascript required!
 
-![example](https://github.com/LogicReinc/LogicReinc.WebApp/raw/master/assets/images/vueappdemo.png)
+![example](https://github.com/LogicReinc/LogicReinc.WebApp/raw/master/assets/images/vueappdemo.PNG)
 
 ```C#
 //Settings attributes
