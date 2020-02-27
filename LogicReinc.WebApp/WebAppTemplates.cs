@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 
@@ -13,7 +14,7 @@ namespace LogicReinc.WebApp
         public static string Template_IPC { get; } = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Scripts.WebWindow.IPC.js");
         public static string Template_Function { get; } = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Scripts.Function.js");
         public static string Template_If { get; } = "if({0}){{ {1} }}";
-
+        public static string Template_Call { get; } = "{0}({1})";
 
         public static string FormatFunction(string name, string body)
         {
@@ -26,6 +27,10 @@ namespace LogicReinc.WebApp
         public static string FormatIf(string condition, string body)
         {
             return string.Format(Template_If, condition, body);
+        }
+        public static string FormatCall(string call, params object[] paras)
+        {
+            return string.Format(Template_Call, call, string.Join(",", paras.Select(x => JsonConvert.SerializeObject(x)).ToArray()));
         }
 
         public static string Format_WebWindowBase(string onload)

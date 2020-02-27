@@ -17,18 +17,17 @@ namespace LogicReinc.WebApp.Mixed
 {
     public class WebViewWindow : Form, IWebWindowImplementation
     {
+        private bool _isReady = false;
         private bool _needCleanup = true;
         private WebView _browser = null;
 
-        public event Func<string, object> OnIPC;
+        public event Func<string, Task<object>> OnIPC;
+
+        public WebWindow Controller { get; set; }
 
         private static string _polyfill = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Mixed.polyfill.js");
 
-
-        public int CaptionHeight { get; set; } = 0;
-        public int ResizeGrip { get; set; } = 0;
-
-
+        
         public WebViewWindow()
         {
             DoubleBuffered = true;
@@ -37,19 +36,31 @@ namespace LogicReinc.WebApp.Mixed
             _browser.IsScriptNotifyAllowed = true;
 
             _browser.AddInitializeScript(_polyfill);
-            _browser.ScriptNotify += (sender, wsn) =>
+            _browser.ScriptNotify += async (sender, wsn) =>
             {
                 string notify = wsn.Value;
                 string id = notify.Substring(0, notify.IndexOf(":"));
                 notify = notify.Substring(notify.IndexOf(":") + 1);
 
-                object result = null;
-                if (OnIPC != null)
-                    result = OnIPC(notify);
 
-                Execute(WebAppTemplates.FormatIf(
-                    $"_IPCResolves[{id}]",
-                    $"_IPCResolves[{id}]({JsonConvert.SerializeObject(result)});"));
+                Task<object> resultT = null;
+                if (OnIPC != null)
+                    resultT = OnIPC(notify);
+
+                if (resultT == null)
+                    return;
+
+                //resultT.Wait();
+                object result = await resultT;//.Result;
+
+
+                if (result != null && result.GetType() == typeof(NoIPCResponse))
+                    return;
+
+                if(!string.IsNullOrEmpty(id))
+                    Execute(WebAppTemplates.FormatIf(
+                        $"_IPCResolves[{id}]",
+                        $"_IPCResolves[{id}]({JsonConvert.SerializeObject(result)});"));
             };
             this.FormClosing += (a, b) =>
             {
@@ -73,7 +84,14 @@ namespace LogicReinc.WebApp.Mixed
             _browser.Dock = DockStyle.Fill;
             Controls.Add(_browser);
 
-            RegisterInitScript(string.Format(WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Mixed.IPCSetup.js")));
+            RegisterInitScript(string.Format(WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Mixed.IPCSetup.WebView.js")));
+            _isReady = true;
+        }
+
+
+        public void Startup()
+        {
+
         }
 
         public void Invoke(Action act)
@@ -146,7 +164,7 @@ namespace LogicReinc.WebApp.Mixed
                 else 
                     throw;
             }
-            catch(Exception ex)
+            catch
             {
                 throw;
             }

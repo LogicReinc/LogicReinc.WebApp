@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace LogicReinc.WebApp.Vue
 {
@@ -45,15 +46,18 @@ namespace LogicReinc.WebApp.Vue
         {
             _vueData.Initialize();
 
-            BeforeVue();
+            Task.Run(() =>
+            {
+                BeforeVue();
 
-            foreach (var comp in _componentTypes)
-                Execute(CreateComponentTemplate(comp.Value));
+                foreach (var comp in _componentTypes)
+                    Execute(CreateComponentTemplate(comp.Value));
 
-            Execute(VueTemplates.Format_VueCore(VueElementID, 
-                _vueData.AsVueDataString(), base.IPCAvailable
-                .Select(x => $"'{x}':{x}")
-                .ToArray()));
+                Execute(VueTemplates.Format_VueCore(VueElementID,
+                    _vueData.AsVueDataString(), base.IPCAvailable
+                    .Select(x => $"'{x}':{x}")
+                    .ToArray()));
+            });
         }
 
         public virtual void BeforeVue()
@@ -71,7 +75,7 @@ namespace LogicReinc.WebApp.Vue
         {
             Dictionary<string, object> changes = _vueData.FindChangesAndUpdate();
             if (changes.Count > 0)
-                JS._this.PushChanges(changes);
+                Task.Run(() => JS._this.PushChanges(changes));
         }
 
         [WebExpose]

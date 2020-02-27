@@ -15,5 +15,11 @@ namespace LogicReinc.WebApp
         [JsonProperty("arguments")]
         public object Arguments { get; set; }
 
+        [JsonProperty("nocallback")]
+        public bool NoCallback { get; set; } = false;
+    }
+    public class NoIPCResponse
+    {
+
     }
 }

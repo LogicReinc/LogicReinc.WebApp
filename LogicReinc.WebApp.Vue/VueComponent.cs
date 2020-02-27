@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LogicReinc.WebApp.Vue
 {
@@ -56,7 +57,7 @@ namespace LogicReinc.WebApp.Vue
         {
             var changes = _data.FindChangesAndUpdate();
             if (changes.Count > 0)
-                Execute($"this.PushChanges({JsonConvert.SerializeObject(changes)})");
+                Task.Run(() => Execute($"this.PushChanges({JsonConvert.SerializeObject(changes)})"));
         }
 
         public Dictionary<string, object> GetData()

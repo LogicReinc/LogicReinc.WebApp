@@ -2,16 +2,19 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Platforms>AnyCPU;x64;x86</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="Scripts\Function.js" />
+    <None Remove="Scripts\IPCSetup.js" />
     <None Remove="Scripts\WebWindow.IPC.js" />
     <None Remove="Scripts\WebWindowBase.js" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Scripts\Function.js" />
+    <EmbeddedResource Include="Scripts\IPCSetup.js" />
     <EmbeddedResource Include="Scripts\WebWindow.IPC.js" />
     <EmbeddedResource Include="Scripts\WebWindowBase.js" />
   </ItemGroup>

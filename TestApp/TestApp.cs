@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace TestApp
 {
-    [AppSize(480,300)]
+    [AppSize(480,260)]
     [ContextResources("TestApp.Web", "")]
     [ResourcePage("TestApp.Web.TestApp.html")]
     [Window(HasBorder = false)]
@@ -36,9 +36,9 @@ namespace TestApp
             Console.WriteLine(str);
         }*/
         [WebExpose]
-        public async void DoSomething()
+        public void DoSomething()
         {
-
+            /*
             JS.testFunction("TestCall");
             JS.testStructure.subFunction();
 
@@ -49,15 +49,15 @@ namespace TestApp
 
             Console.WriteLine((string)JS.SomeValue);
             Console.WriteLine((string)JS.SomeObj.Str);
-
+            */
             Console.WriteLine((int)JS.window.outerWidth);
 
             Stopwatch watch = new Stopwatch();
-            int count = 1000;
+            int count = 10000;
             watch.Start();
             for (int i = 0; i < count; i++)
             {
-                int ow = JS.window.outerWidth;
+                int val = (int)JS.window.outerWidth;
             }
             watch.Stop();
             Console.WriteLine($"Browser communication {count} times in {watch.ElapsedMilliseconds}ms");

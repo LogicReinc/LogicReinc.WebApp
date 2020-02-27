@@ -31,7 +31,7 @@ namespace LogicReinc.WebApp
         public bool IsReady { get; private set; } = false;
 
 
-        public bool WriteHtmlToFile { get; set; } = false;
+        public bool WriteHtmlToFile { get; set; } = true;
         public bool EmbedHtml { get; set; } = true;
 
 
@@ -42,18 +42,22 @@ namespace LogicReinc.WebApp
         public WebWindow()
         {
             Window = WebWindows.GetWindow();
+            Window.Controller = this;
+            Console.WriteLine("Window Created");
             Window.OnIPC += OnIPC;
             Loaded += OnReady;
             MapIPC();
             Initializing();
+            Window.Invoke(() =>
+            {
+                Window.Startup();
+            });
         }
         private void Initializing()
         {
             Type type = GetType();
 
             JS = new JSPassthrough(this);
-
-            //Register Initialize Scripts
             Window.RegisterInitScript(WebAppTemplates.Format_WebWindowBase(CSCallback((args) =>
             {
                 if (Loaded != null)
@@ -122,7 +126,10 @@ namespace LogicReinc.WebApp
         [WebExpose]
         public void Close()
         {
-            Window.Close();
+            Window.Invoke(() =>
+            {
+                Window.Close();
+            });
         }
 
         [WebExpose]
@@ -168,8 +175,12 @@ namespace LogicReinc.WebApp
             WebPage page = new WebPage(html);
             Context.EmbedWebPage(page);
             _lastLoadedHtml = page.ToString();
-
-            File.WriteAllText("lastpage.html", _lastLoadedHtml);
+            if (WriteHtmlToFile)
+            {
+                string path = Path.Combine(new FileInfo(Assembly.GetExecutingAssembly().Location).DirectoryName, "lastpage.html");
+                Console.WriteLine("Writing html to:" + path);
+                File.WriteAllText(path, _lastLoadedHtml);
+            }
             Window.LoadHtml(_lastLoadedHtml);
         }
         public void LoadUrl(string url)
@@ -178,7 +189,7 @@ namespace LogicReinc.WebApp
         }
 
 
-        public void RegisterFunction(string function, Func<JToken[], object> cb)
+        public void RegisterFunction(string function, Func<JToken[], object> cb, bool hasCallback = true)
         {
             if (function.Any(x => !char.IsLetter(x) && x != '_'))
                 throw new ArgumentException("Only letters allowed in function name");
@@ -187,7 +198,8 @@ namespace LogicReinc.WebApp
             {
                 Type = "callback",
                 ID = RegisterCallback(cb, false),
-                Arguments = new JavascriptReference("arguments")
+                Arguments = new JavascriptReference("arguments"),
+                NoCallback = !hasCallback
             }));
         }
 
@@ -210,24 +222,27 @@ namespace LogicReinc.WebApp
 
         private async void OnReady()
         {
-            IsReady = true;
+            //Task.Run(() =>
+            //{
+                IsReady = true;
 
-            if (_showOnReady)
-                this.Show();
+                if (_showOnReady)
+                    this.Show();
 
 
-            if (_jsStartupQueue != null && _jsStartupQueue.Count > 0)
-                foreach(var jsq in _jsStartupQueue)
-                    try
-                    {
-                        jsq.Item2(Execute(jsq.Item1), null);
-                    }
-                    catch(Exception ex)
-                    {
-                        jsq.Item2(null, ex);
-                    }
+                if (_jsStartupQueue != null && _jsStartupQueue.Count > 0)
+                    foreach (var jsq in _jsStartupQueue)
+                        try
+                        {
+                            jsq.Item2(Execute(jsq.Item1), null);
+                        }
+                        catch (Exception ex)
+                        {
+                            jsq.Item2(null, ex);
+                        }
 
-            OnLoaded();
+                OnLoaded();
+            //});
         }
 
         public virtual void Initialize()
@@ -239,41 +254,49 @@ namespace LogicReinc.WebApp
 
         }
 
-        private object OnIPC(string notify)
+        private async Task<object> OnIPC(string notify)
         {
 
-            JObject obj = JObject.Parse(notify);
-            if (obj.ContainsKey("type"))
+            Task<object> t = Task.Run(() =>
             {
-                string type = obj.GetValue("type").ToString();
-                JToken[] objs = obj.GetValue("arguments").ToArray();
-
-                switch (type)
+                JObject obj = JObject.Parse(notify);
+                if (obj.ContainsKey("type"))
                 {
-                    case "callback":
-                        string id = obj.GetValue("id").ToString();
-                        return TriggerCallback(id, objs);
-                    case "ipc":
-                        string function = obj.GetValue("function").ToString();
-                        return OnIPCCall(function, objs);
-                    case "error":
-                        JObject errObj = objs[0].ToObject<JObject>();
-                        OnScriptError(
-                            errObj.GetValue("line").ToObject<int>(),
-                            errObj.GetValue("col").ToObject<int>(),
-                            errObj.GetValue("error").ToString(),
-                            (errObj.ContainsKey("stack")) ?
-                                errObj.GetValue("stack").ToString() :
-                                "");
-                        break;
-                    default:
-                        object result = null;
-                        if (HandleIPC(type, obj, out result))
-                            return result;
-                        break;
+                    string type = obj.GetValue("type").ToString();
+                    JToken[] objs = obj.GetValue("arguments").ToArray();
+
+                    switch (type)
+                    {
+                        case "callback":
+                            string id = obj.GetValue("id").ToString();
+                            return TriggerCallback(id, objs);
+                        case "ipc":
+                            string function = obj.GetValue("function").ToString();
+                            return OnIPCCall(function, objs);
+                        case "error":
+                            JObject errObj = objs[0].ToObject<JObject>();
+                            OnScriptError(
+                                errObj.GetValue("line").ToObject<int>(),
+                                errObj.GetValue("col").ToObject<int>(),
+                                errObj.GetValue("error").ToString(),
+                                (errObj.ContainsKey("stack")) ?
+                                    errObj.GetValue("stack").ToString() :
+                                    "");
+                            break;
+                        case "log":
+                            JObject logObj = objs[0].ToObject<JObject>();
+                            Console.WriteLine($"Log:{logObj.GetValue("msg").ToString()}");
+                            break;
+                        default:
+                            object result = null;
+                            if (HandleIPC(type, obj, out result))
+                                return result;
+                            break;
+                    }
                 }
-            }
-            return null;
+                return null;
+            });
+            return await t;
         }
         protected virtual object OnIPCCall(string function, JToken[] arguments)
         {
@@ -339,14 +362,14 @@ namespace LogicReinc.WebApp
             }
 
             foreach (MethodInfo meth in methods)
-                RegisterFunction(meth.Name, (args) => OnIPCCall(meth.Name, args));
+                RegisterFunction(meth.Name, (args) => OnIPCCall(meth.Name, args), meth.ReturnType != typeof(void));
         }
 
         //Core
         #region CallbackSystem
         private Dictionary<string, ScriptCallback> _scriptCallbacks = new Dictionary<string, ScriptCallback>();
 
-        private string CSCallback(Func<JToken[], object> callback, bool repeatable = false, params string[] arguments)
+        public string CSCallback(Func<JToken[], object> callback, bool repeatable = false, params string[] arguments)
         {
             return WebAppTemplates.FormatIPC(new IPCObject()
             {

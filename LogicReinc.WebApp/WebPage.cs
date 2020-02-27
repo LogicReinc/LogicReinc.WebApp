@@ -17,6 +17,12 @@ namespace LogicReinc.WebApp
             return _document;
         }
 
+        public void AddToBodyStart(string replacement)
+        {
+            int hlength = "<body>".Length;
+            int hIndex = _document.IndexOf("<body>", StringComparison.OrdinalIgnoreCase);
+            _document = _document.Substring(0, hIndex) + "<body>" + replacement + _document.Substring(hIndex + hlength);
+        }
         public void AddToEnd(string replacement)
         {
             int blength = "</body>".Length;

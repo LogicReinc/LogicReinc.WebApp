@@ -20,26 +20,40 @@ Thats it, Use WebWindows.SetManager() once and create your window class and html
 ## Nuget
 ..todo
 
+## Platforms
+Supported platforms are completley dependent on your WindowManager implementation. In theory you can implement this framework on any browser with 2 way communication.
+Currently implemented in Mixed WindowManager:
+	- Windows 32bit : Microsoft Webview
+	- Windows 64bit : Microsft Webview / Chromium
+	- Linux 64bit : Chromium
+This list should expand quick, expect Android, Mac and other architectures such as ARM soon.
+
 ## Window Implementation
 As stated before, the core libraries are completely .net standard and platform independent, thus requiring a seperate library that implements the windows/browser. This is done on purpose to not lock you into a specific setup and allows for easy expansion in the future. 
 A lightweight browser is already implemented and ready for use with the LogicReinc.WebApp.Mixed library. This provides several window implementations for Windows/Linux/Mac for Mono using different browsers depending on the operating system (for example, Windows uses Microsofts new WebView library with a  polyfill integrated).
 
 To implement your own window system you simply create a new library of any architecture that references LogicReinc.WebApp and implements IWindowManager and IWebWindow interfaces. And in your client application you pass an instance of the IWindowManager you created to the core library as seen in the example.
+NOTE: At current stage of the project implementation still requires very specific javascript injection.. Future prospects.
 
 ## Limitations
 Through abstraction a lot of limitations can be alleviated. But the only core limitation is that all communication between C# and javascript will always have some delay for obvious reasons. Thus its best to limit it as much as possible. This IPC delay is completely dependent on the window implementation. But for example the Mixed implementation for Windows has a delay of about 1 to 5ms delay to fetch a javascript value from C#.
 
 ## Dependencies
 Just Newtonsoft.Json for the core library. 
-Window implementation depends on what you use. 
-(eg. Mixed just uses Microsft.Toolkit.Forms.UI.Controls.WebView.dll)
+
+Other dependencies depend on your WindowManager:
+ - Mixed (Force Chromium)
+	- CefGlue
+ - Mixed (non-Chromium)
+	- CefGlue (for Linux)
+	- Microsoft WebView (for Windows)
 
 ## Security
 Due to the tight integration with C# it means that depending on your settings you may expose C# functions to your UI, thus be careful what code you trust in your UI.
 If you want to limit the exposed functions to javascript set your Window Security to Attributed, this only exposed the methods with the [WebExposed] attribute.
 
 ## Professional usage
-While this library was started for my own personal projects, I can see the appeal in other projects as well. Be aware that this library achieves a lot of its features through questionable means such as javascript injection. And strange bugs may occur due to that nature. If you're going to use this in anything professional be very aware of the possibility of strange formatting or js dependencies conflicting. Also take extra note to the security of your application and take a look at the underlying logic to make sure there are no exploits.
+This library is still in prototype phases and is not recommended for profesional use. Use at own risk.
 
 ## What it looks like
 On application start:
@@ -99,14 +113,46 @@ Embedded Resource: TestApp.Web.Test.html
 </html>
 ```
 With some more styling it could look like this on your desktop:
-![example](https://github.com/LogicReinc/LogicReinc.WebApp/raw/master/assets/images/webappdemo.png)
+![example](https://github.com/LogicReinc/LogicReinc.WebApp/raw/master/assets/images/webappdemo.PNG)
+
+## Javascript Integration
+Javascript
+```javascript
+var testStructure = {
+	subFunction(){
+		Print("whatever");     
+	},
+	intVal : 123
+};
+function testFunction(str){
+	Print(str);  
+}
+DoSomething();
+```
+C#
+```C#
+public void DoSomething()
+{
+	JS.testFunction("someParameter");
+	JS.testStructure.subFunction();
+    JS.SomeValue = "Testing?";
+    JS.SomeObj = new Object();
+    JS.SomeObj.Str = "Whatever";
+	
+	string someValue = JS.SomeValue;
+	string someObjStr = JS.SomeObj.Str;
+	int testStrIntVal = JS.testStructure.intVal;
+	int windowWidth = JS.window.outerWidth;
+}
+```
+
 
 ## Vue Integration
 By referencing LogicReinc.WebApp.Vue you can utilize Vue exclusively through C#. Removing the need for javascript entirely. You do this by implementing the VueWindow instead.
 
 No javascript required!
 
-![example](https://github.com/LogicReinc/LogicReinc.WebApp/raw/master/assets/images/vueappdemo.png)
+![example](https://github.com/LogicReinc/LogicReinc.WebApp/raw/master/assets/images/vueappdemo.PNG)
 
 ```C#
 //Settings attributes
@@ -168,7 +214,7 @@ TestApp.Web.VueTest.html
         <md-button class="md-raised md-primary" @click="Increment()">
             Increase
         </md-button>
-        <counter-comp></counter-comp>
+        <counter></counter>
     </div>
 
     <script src="scripts/vue.js"></script>

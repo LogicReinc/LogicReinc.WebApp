@@ -9,10 +9,11 @@ namespace LogicReinc.WebApp
 {
     public interface IWebWindowImplementation
     {
-        event Func<string, object> OnIPC;
+        event Func<string, Task<object>> OnIPC;
 
-        int CaptionHeight { get; set; }
-        int ResizeGrip { get; set; }
+        WebWindow Controller { get; set; }
+
+        void Startup();
 
         void SetSize(int x, int y);
         void SetPosition(int x, int y);

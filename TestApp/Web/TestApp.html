@@ -45,13 +45,18 @@
     <script src="scripts/vue.js"></script>
     <script src="scripts/vue-material.min.js"></script>
     <script>
-    
-        Vue.use(VueMaterial.default);
-        new Vue({
-            el:"#root",
-            data:{}
-		});
-
+        try
+        {
+            Vue.use(VueMaterial.default);
+            new Vue({
+                el:"#root",
+                data:{}
+		    });
+        }
+        catch(ex){
+            alert(ex);
+		}
+        
         function getRootHeight(){
             return document.getElementById("root").clientHeight;
 		}
@@ -70,7 +75,9 @@
             Print(str);  
 		}
         
+        _LOG("a");
         DoSomething();
+        _LOG("Testing2");
     </script>
 </body>
 </html>
