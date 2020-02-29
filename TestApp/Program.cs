@@ -36,11 +36,11 @@ namespace TestApp
             {
                 WebWindows.SetManager(new MixedWindowManager(platform, Is64, args, forceChromium));
 
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < 1; i++)
                 {
                     Console.WriteLine("Starting application");
-                    //TestApp app = new TestApp();
-                    VueTestApp app = new VueTestApp();
+                    TestApp app = new TestApp();
+                    //VueTestApp app = new VueTestApp();
                     app.Show();
                 }
                 Console.WriteLine("Launching done");

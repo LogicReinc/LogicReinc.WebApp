@@ -13,6 +13,7 @@ namespace TestApp
     [ContextResources("TestApp.Web", "")]
     [ResourcePage("TestApp.Web.VueTest.html")]
     [ExposeSecurity(WebExposeType.Attributed)]
+    [Window(HasBorder = true)]
     [VueSettings(RequireExpose = false)]
     public class VueTestApp : VueWindow
     {

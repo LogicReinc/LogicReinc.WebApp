@@ -1,14 +1,11 @@
 ﻿using LogicReinc.WebApp.Chromium;
-using LogicReinc.WebApp.Javascript;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -39,7 +36,6 @@ namespace LogicReinc.WebApp.Mixed
 
         public ChromiumWindow()
         {
-            BackColor = Color.Black;
             RegisterInitScript(_polyfill);
             RegisterInitScript(string.Format(WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Mixed.IPCSetup.Chromium.js")));
 
@@ -47,11 +43,9 @@ namespace LogicReinc.WebApp.Mixed
 
         public void Startup()
         {
-            Thread.Sleep(2);
+            WebAppLogger.Log(WebAppLogLevel.Info, "Chromium Startup");
             _browserContainer.Dock = DockStyle.Fill;
-            _browserContainer.BackColor = Color.Black;
             _browser = new CefWebBrowser(this.Width, this.Height);
-            _browser.BackColor = Color.Black;
             _browser.OnProcessMessage += ProcessMessage;
             _browser.BrowserReady += BrowserReady;
             _browser.BackColor = Color.DarkRed;
@@ -62,15 +56,17 @@ namespace LogicReinc.WebApp.Mixed
             _browserContainer.Controls.Add(_browser);
 
             Controls.Add(_browserContainer);
-            Opacity = 0;
-            Show();
-            Hide();
-            Opacity = 1;
+            //Opacity = 0;
+            //Show();
+            //Hide();
+            //Opacity = 1;
         }
 
         private bool ProcessMessage(CefProcessId pid, CefProcessMessage msg)
         {
             string notify = msg.Arguments.GetString(4);
+
+            WebAppLogger.Log(WebAppLogLevel.Info, "IPC:" + notify);
 
             if (notify.StartsWith("chrom:"))
             {
@@ -93,31 +89,27 @@ namespace LogicReinc.WebApp.Mixed
             {
                 string id = notify.Substring(0, notify.IndexOf(":"));
                 notify = notify.Substring(notify.IndexOf(":") + 1);
-
-                Task<object> resultT = null;
+                
                 if (OnIPC != null)
-                    resultT = OnIPC(notify);
-
-                if (resultT == null)
-                    return true;
-
-
-                IPCObject obj = JsonConvert.DeserializeObject<IPCObject>(notify);
-                if(!obj.NoCallback)
-                    resultT.Wait();
-                object result = obj.NoCallback ? new NoIPCResponse() : resultT.Result;
-
-                if (result != null && result.GetType() == typeof(NoIPCResponse))
-                    return true;
-
-                if(!string.IsNullOrEmpty(id))
-                    Task.Run(() =>
+                    OnIPC(notify).ContinueWith((t) =>
                     {
-                        Execute(WebAppTemplates.FormatIf(
-                            $"_IPCResolves[{id}]",
-                            $"_IPCResolves[{id}]({JsonConvert.SerializeObject(result)});"));
-                    });
+                        object tr = t.Result;
 
+                        IPCObject obj = JsonConvert.DeserializeObject<IPCObject>(notify);
+
+                        WebAppLogger.Log(WebAppLogLevel.Verbose, "IPC: Finalizing");
+                        object result = obj.NoCallback ? new NoIPCResponse() : tr;
+
+                        if (result != null && result.GetType() == typeof(NoIPCResponse))
+                        {
+                            WebAppLogger.Log(WebAppLogLevel.Verbose, "IPC: No Response");
+                        }
+                        else if (!string.IsNullOrEmpty(id))
+                            Execute(WebAppTemplates.FormatIf(
+                                $"_IPCResolves[{id}]",
+                                $"_IPCResolves[{id}]({JsonConvert.SerializeObject(result)});"));
+
+                    });
                 return true;
             }
         }
@@ -127,13 +119,21 @@ namespace LogicReinc.WebApp.Mixed
             _isReady = true;
             if (OnReady != null)
                 OnReady();
-            Invoke(() => { Visible = true; });
         }
         private class DevToolsWebClient : CefClient { }
 
         public void Invoke(Action act)
         {
-            base.Invoke((MethodInvoker)delegate { act(); });
+            //Ensure not blocking wait on browser thread.
+            Task.Run(() =>
+            {
+                if (InvokeRequired)
+                {
+                    base.Invoke((MethodInvoker)delegate { act(); });
+                }
+                else
+                    act();
+            });
         }
 
         public void Move(int x, int y)
@@ -181,13 +181,12 @@ namespace LogicReinc.WebApp.Mixed
                 CefFrame frame = _browser.Browser.GetMainFrame();
                 _browser.Browser.GetMainFrame().LoadString(page.ToString(), "http://localhost/");
             });
-            //Console.WriteLine("Loaded");
         }
         public void LoadUrl(string url)
         {
             RunOnReady(() =>
             {
-                Console.WriteLine("Loading Url:");
+                WebAppLogger.Log(WebAppLogLevel.Info, "Loading Url:");
                 _browser.Browser.GetMainFrame().LoadUrl(url);
             });
         }

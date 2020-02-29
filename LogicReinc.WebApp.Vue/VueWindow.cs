@@ -98,6 +98,7 @@ namespace LogicReinc.WebApp.Vue
 
         protected override bool HandleIPC(string type, JObject ipcPackage, out object result)
         {
+            
             switch (type)
             {
                 case "componentCall":

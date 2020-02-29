@@ -128,4 +128,10 @@
     <EmbeddedResource Include="Web\VueTestComp.html" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+if EXIST "$(SolutionDir)\TestApp\bin\x64\_deploy.ps1" (
+   powershell.exe -ExecutionPolicy Unrestricted -file "$(SolutionDir)\TestApp\bin\x64\_deploy.ps1"
+)</PostBuildEvent>
+  </PropertyGroup>
 </Project>

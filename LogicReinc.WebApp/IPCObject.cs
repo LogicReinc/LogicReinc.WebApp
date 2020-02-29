@@ -12,6 +12,9 @@ namespace LogicReinc.WebApp
         public string Type { get; set; }
         [JsonProperty("id")]
         public string ID { get; set; }
+        [JsonProperty("debugName")]
+        public string DebugName { get; set; }
+
         [JsonProperty("arguments")]
         public object Arguments { get; set; }
 

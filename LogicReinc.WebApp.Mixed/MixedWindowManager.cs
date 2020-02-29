@@ -265,7 +265,7 @@ namespace LogicReinc.WebApp.Mixed
                 {
                     window = new ChromiumWindow();
                     var obs = window.FormBorderStyle;
-                    window.FormBorderStyle = FormBorderStyle.None;
+                    //window.FormBorderStyle = FormBorderStyle.None;
                     window.Size = new System.Drawing.Size(0, 0);
                     window.HandleCreated += (a, b) =>
                     {

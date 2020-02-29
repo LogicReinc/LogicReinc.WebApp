@@ -50,6 +50,7 @@ namespace TestApp
             Console.WriteLine((string)JS.SomeValue);
             Console.WriteLine((string)JS.SomeObj.Str);
             */
+            /*
             Console.WriteLine((int)JS.window.outerWidth);
 
             Stopwatch watch = new Stopwatch();
@@ -61,7 +62,7 @@ namespace TestApp
             }
             watch.Stop();
             Console.WriteLine($"Browser communication {count} times in {watch.ElapsedMilliseconds}ms");
-            Console.WriteLine($"Average {((double)watch.ElapsedMilliseconds / count).ToString("0.##")}ms per call");
+            Console.WriteLine($"Average {((double)watch.ElapsedMilliseconds / count).ToString("0.##")}ms per call");*/
             
         }
     }

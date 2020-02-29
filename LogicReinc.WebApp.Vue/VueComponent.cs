@@ -44,7 +44,7 @@ namespace LogicReinc.WebApp.Vue
         [VuePreventTick]
         public void Destroyed()
         {
-            Parent.RemoveComponent(ComponentID);
+            //Parent.RemoveComponent(ComponentID);
         }
 
         //Control

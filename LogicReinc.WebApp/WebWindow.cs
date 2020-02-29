@@ -43,7 +43,7 @@ namespace LogicReinc.WebApp
         {
             Window = WebWindows.GetWindow();
             Window.Controller = this;
-            Console.WriteLine("Window Created");
+            WebAppLogger.Log(WebAppLogLevel.Info, "Window Created");
             Window.OnIPC += OnIPC;
             Loaded += OnReady;
             MapIPC();
@@ -58,12 +58,14 @@ namespace LogicReinc.WebApp
             Type type = GetType();
 
             JS = new JSPassthrough(this);
+            
             Window.RegisterInitScript(WebAppTemplates.Format_WebWindowBase(CSCallback((args) =>
             {
+                WebAppLogger.Log(WebAppLogLevel.Info, "Initializing..");
                 if (Loaded != null)
                     Loaded();
-                return null;
-            })));
+                return new NoIPCResponse();
+            }, false, "Initializing")));
 
             //Load ContextResources
             foreach (ContextResourcesAttribute r in type.GetCustomAttributes<ContextResourcesAttribute>())
@@ -79,10 +81,13 @@ namespace LogicReinc.WebApp
             WindowAttribute windowAtt = type.GetCustomAttribute<WindowAttribute>();
             if(windowAtt != null)
             {
+                
                 Window.Invoke(() =>
                 {
                     if (!windowAtt.HasBorder)
                         Window.RemoveBorder();
+                    else
+                        Window.ShowBorder();
                 });
             }
 
@@ -108,8 +113,10 @@ namespace LogicReinc.WebApp
             if (!IsReady)
                 _showOnReady = true;
             else
+            {
                 Window.Invoke(() =>
                     Window.Show());
+            }
         }
         [WebExpose]
         public void Focus()
@@ -178,7 +185,7 @@ namespace LogicReinc.WebApp
             if (WriteHtmlToFile)
             {
                 string path = Path.Combine(new FileInfo(Assembly.GetExecutingAssembly().Location).DirectoryName, "lastpage.html");
-                Console.WriteLine("Writing html to:" + path);
+                WebAppLogger.Log(WebAppLogLevel.Info, "Writing html to:" + path);
                 File.WriteAllText(path, _lastLoadedHtml);
             }
             Window.LoadHtml(_lastLoadedHtml);
@@ -197,6 +204,7 @@ namespace LogicReinc.WebApp
             Window.RegisterInitScript(WebAppTemplates.FormatIPCFunction(function, new IPCObject()
             {
                 Type = "callback",
+                DebugName = function,
                 ID = RegisterCallback(cb, false),
                 Arguments = new JavascriptReference("arguments"),
                 NoCallback = !hasCallback
@@ -222,27 +230,23 @@ namespace LogicReinc.WebApp
 
         private async void OnReady()
         {
-            //Task.Run(() =>
-            //{
-                IsReady = true;
+            IsReady = true;
 
-                if (_showOnReady)
-                    this.Show();
+            if (_showOnReady)
+                this.Show();
 
-
-                if (_jsStartupQueue != null && _jsStartupQueue.Count > 0)
-                    foreach (var jsq in _jsStartupQueue)
-                        try
-                        {
-                            jsq.Item2(Execute(jsq.Item1), null);
-                        }
-                        catch (Exception ex)
-                        {
-                            jsq.Item2(null, ex);
-                        }
-
-                OnLoaded();
-            //});
+            WebAppLogger.Log(WebAppLogLevel.Info, "Executing startup scripts");
+            if (_jsStartupQueue != null && _jsStartupQueue.Count > 0)
+                foreach (var jsq in _jsStartupQueue)
+                    try
+                    {
+                        jsq.Item2(Execute(jsq.Item1), null);
+                    }
+                    catch (Exception ex)
+                    {
+                        jsq.Item2(null, ex);
+                    }
+            OnLoaded();
         }
 
         public virtual void Initialize()
@@ -268,12 +272,16 @@ namespace LogicReinc.WebApp
                     switch (type)
                     {
                         case "callback":
+                            WebAppLogger.Log(WebAppLogLevel.Info, "IPC: Callback");
                             string id = obj.GetValue("id").ToString();
-                            return TriggerCallback(id, objs);
+                            object cbResult = TriggerCallback(id, objs);
+                            return cbResult;
                         case "ipc":
+                            WebAppLogger.Log(WebAppLogLevel.Info, "IPC: Passthrough");
                             string function = obj.GetValue("function").ToString();
                             return OnIPCCall(function, objs);
                         case "error":
+                            WebAppLogger.Log(WebAppLogLevel.Info, "IPC: Error");
                             JObject errObj = objs[0].ToObject<JObject>();
                             OnScriptError(
                                 errObj.GetValue("line").ToObject<int>(),
@@ -313,8 +321,8 @@ namespace LogicReinc.WebApp
         private void OnScriptError(int line, int collumn, string error, string stack)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"Script Error ({line}): {error}");
-            Console.WriteLine(stack);
+            WebAppLogger.Log(WebAppLogLevel.Error, $"Script Error ({line}): {error}");
+            WebAppLogger.Log(WebAppLogLevel.Error, stack);
 
             string[] htmlLines = _lastLoadedHtml.Split('\n');
             if (htmlLines.Length > line && line > 0)
@@ -327,7 +335,7 @@ namespace LogicReinc.WebApp
                     errLine = errLine.Substring(start,end);
                 }
                 Console.ForegroundColor = ConsoleColor.DarkRed;
-                Console.WriteLine(errLine);
+                WebAppLogger.Log(WebAppLogLevel.Error, errLine);
                 Console.ResetColor();
             }
         }
@@ -369,23 +377,25 @@ namespace LogicReinc.WebApp
         #region CallbackSystem
         private Dictionary<string, ScriptCallback> _scriptCallbacks = new Dictionary<string, ScriptCallback>();
 
-        public string CSCallback(Func<JToken[], object> callback, bool repeatable = false, params string[] arguments)
+        public string CSCallback(Func<JToken[], object> callback, bool repeatable = false, string debugName = null, params string[] arguments)
         {
             return WebAppTemplates.FormatIPC(new IPCObject()
             {
+                DebugName = debugName,
                 Type = "callback",
                 ID = RegisterCallback(callback, !repeatable),
                 Arguments = arguments.Select(x=>new JavascriptReference(x)).ToArray()
             });
         }
 
-        private string RegisterCallback(Func<JToken[], object> callback, bool removeOnCall = false)
+        private string RegisterCallback(Func<JToken[], object> callback, bool removeOnCall = false, string debugName = null)
         {
             ScriptCallback cb = new ScriptCallback()
             {
+                DebugName = debugName,
                 ID = Guid.NewGuid().ToString(),
                 Callback = callback,
-                RemoveOnCall = removeOnCall
+                RemoveOnCall = removeOnCall,
             };
             if (_scriptCallbacks.ContainsKey(cb.ID))
                 _scriptCallbacks[cb.ID] = cb;
@@ -409,6 +419,7 @@ namespace LogicReinc.WebApp
         private class ScriptCallback
         {
             public string ID { get; set; }
+            public string DebugName { get; set; }
             public Func<JToken[], object> Callback { get; set; }
             public bool RemoveOnCall { get; set; }
         }
