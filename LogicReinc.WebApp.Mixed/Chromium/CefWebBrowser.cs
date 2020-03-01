@@ -27,13 +27,16 @@ namespace LogicReinc.WebApp.Chromium
 
         public event Func<CefProcessId, CefProcessMessage, bool> OnProcessMessage;
 
-        public CefWebBrowser(int initialWidth = 200, int initialHeight = 100)
+        private IWebWindowImplementation _window = null;
+
+        public CefWebBrowser(IWebWindowImplementation window, int initialWidth = 200, int initialHeight = 100)
         {
+            _window = window;
             SetStyle(
                 ControlStyles.ContainerControl
                 | ControlStyles.ResizeRedraw
-                | ControlStyles.FixedWidth
-                | ControlStyles.FixedHeight
+                //| ControlStyles.FixedWidth
+                //| ControlStyles.FixedHeight
                 | ControlStyles.StandardClick
                 | ControlStyles.UserMouse
                 | ControlStyles.SupportsTransparentBackColor
@@ -77,6 +80,8 @@ namespace LogicReinc.WebApp.Chromium
 
         public WebBrowser WebBrowser { get { return _core; } }
 
+        private CefWindowInfo _windowInfo = null;
+
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
@@ -87,10 +92,10 @@ namespace LogicReinc.WebApp.Chromium
             }
             else
             {
-                var windowInfo = CefWindowInfo.Create();
-                windowInfo.SetAsChild(Handle, new CefRectangle { X = 0, Y = 0, Width = _initialWidth, Height = _initialHeight });
+                _windowInfo = CefWindowInfo.Create();
+                _windowInfo.SetAsChild(Handle, new CefRectangle { X = 0, Y = 0, Width = _initialWidth, Height = _initialHeight });
                 WebAppLogger.Log(WebAppLogLevel.Info, $"WindowInfo: ({_initialWidth},{_initialHeight})");
-                _core.Create(windowInfo);
+                _core.Create(_windowInfo);
             }
 
             _handleCreated = true;
@@ -112,12 +117,12 @@ namespace LogicReinc.WebApp.Chromium
         internal void BrowserCreated(object sender, EventArgs e)
         {
             // _browser = browser;
-            //_browserWindowHandle = _core.CefBrowser.GetHost().GetWindowHandle();
+            _browserWindowHandle = _core.CefBrowser.GetHost().GetWindowHandle();
 
             WebAppLogger.Log(WebAppLogLevel.Info, $"Chromium Handle: {_browserWindowHandle}");
 
             if (CefRuntime.Platform == CefRuntimePlatform.Linux)
-                ;// _display = XOpenDisplay(IntPtr.Zero);
+                _display = XOpenDisplay(IntPtr.Zero);
 
             //ResizeWindow(_browserWindowHandle, Width, Height);
 
@@ -142,9 +147,19 @@ namespace LogicReinc.WebApp.Chromium
 
         [DllImport("libX11")]
         public static extern int XMoveResizeWindow(IntPtr display, IntPtr w, int x, int y, int width, int height);
-
+        [DllImport("libX11")]
+        public static extern int XResizeWindow(IntPtr display, IntPtr w, int width, int height);
         [DllImport("libX11")]
         public static extern IntPtr XOpenDisplay(IntPtr display);
+
+
+        [DllImport("libgtk-3.so.0", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr gtk_widget_get_display(IntPtr window);
+        [DllImport("libgdk-3.so.0", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr gdk_x11_window_get_xid(IntPtr raw);
+        [DllImport("libgdk-3.so.0", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr gdk_x11_display_get_xdisplay(IntPtr gdkDisplay);
+
 
         private IntPtr _display;
 
@@ -159,8 +174,18 @@ namespace LogicReinc.WebApp.Chromium
                 }
                 else if (CefRuntime.Platform == CefRuntimePlatform.Linux)
                 {
-                    //Console.WriteLine($"X11 Resize ({width},{height})");
-                    //XMoveResizeWindow(_display, handle, 0, 0, width, height);
+                    Console.WriteLine($"X11 Resize ({width},{height}) Display: {_display}, Window: {handle}" );
+
+                    //Move to init when working
+                    IntPtr display = XOpenDisplay(IntPtr.Zero);
+                    IntPtr window = _core.CefBrowser.GetHost().GetWindowHandle();
+
+
+                    //Neither seem to work..
+                    //XResizeWindow(display, window, width, height);
+                    SetWindowPos(window, IntPtr.Zero, 0, 0, width, height, 0x0002 | 0x0004);
+
+                    _core.CefBrowser?.GetHost().WasResized();
                 }
                 
             }

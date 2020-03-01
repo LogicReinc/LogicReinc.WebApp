@@ -1,0 +1,81 @@
+﻿<html style="overflow: hidden;">
+<head>
+    <!--<meta http-equiv="X-UA-Compatible" content="IE=edge">-->
+    <title></title>
+
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+    <link rel="stylesheet" href="styles/roboto.css">
+    <link rel="stylesheet" href="styles/vue-material.min.css">
+    <link rel="stylesheet" href="styles/default.css">
+    <link rel="stylesheet" href="styles/Main.css" />
+</head>
+<body>
+    <div id="root">
+        <div id="dragbar" onmousedown="StartDragMove()" onmouseup="StopDragMove()" class="header">
+            <div class="headerText">
+                Access Request
+            </div>
+            <div class="closeButton" onclick="Close()">
+                <i class="fas fa-times"></i>
+            </div>
+        </div>
+        <div class="body">
+            <div class="permissionReq">
+                Are you sure you want to take the following action
+            </div>
+            <div style="padding: 20px;">
+                <div class="permission">
+                    <div style="width: 40px;" class="permissionIcon">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div style="width: 340px;" class="permissionText">
+                        Send this Image.png to your friend
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: center;">
+                <md-button class="md-raised md-primary" onclick="Print('True')">Yes</md-button>
+                <md-button class="md-raised md-accent" onclick="Print('False')">No</md-button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.rawgit.com/inexorabletash/polyfill/v0.1.41/polyfill.min.js"></script>
+    <script src="scripts/vue.js"></script>
+    <script src="https://unpkg.com/vue-material"></script>
+    <script>
+        try {
+            Vue.use(VueMaterial.default);
+            new Vue({
+                el: "#root",
+                data: {}
+            });
+        }
+        catch (ex) {
+            alert(ex);
+        }
+                /*
+                function getRootHeight(){
+                    return document.getElementById("root").clientHeight;
+                }
+
+                SetSize(480, getRootHeight());
+
+
+
+                var testStructure = {
+                    subFunction(){
+                        Print("whatever");
+                    }
+                };
+
+                function testFunction(str){
+                    Print(str);
+                }
+
+                _LOG("a");
+                DoSomething();
+                _LOG("Testing2");*/
+    </script>
+</body>
+</html>

@@ -19,7 +19,13 @@ namespace LogicReinc.WebApp
             if (OnLog != null)
                 OnLog(level, log);
             if (Print)
+            {
+                if (level == WebAppLogLevel.Error)
+                    Console.ForegroundColor = ConsoleColor.DarkRed;
                 Console.WriteLine($"[{level}]{log}");
+                if (level == WebAppLogLevel.Error)
+                    Console.ResetColor();
+            }
         }
     }
     public enum WebAppLogLevel

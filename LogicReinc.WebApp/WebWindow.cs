@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
@@ -15,7 +16,9 @@ namespace LogicReinc.WebApp
 {
     public class WebWindow
     {
-        private string _lastLoadedHtml = "";
+        public static Assembly EntryAssembly { get; set; } = null;
+
+        internal string _lastLoadedHtml = "";
         private bool _showOnReady = false;
 
         private Dictionary<string, Func<JToken[], object>> _ipcAvailable = null;
@@ -39,9 +42,9 @@ namespace LogicReinc.WebApp
 
         public dynamic JS { get; private set; }
 
-        public WebWindow()
+        public WebWindow(IWebWindowImplementation window = null)
         {
-            Window = WebWindows.GetWindow();
+            Window = window ?? WebWindows.GetWindow();
             Window.Controller = this;
             WebAppLogger.Log(WebAppLogLevel.Info, "Window Created");
             Window.OnIPC += OnIPC;
@@ -69,7 +72,7 @@ namespace LogicReinc.WebApp
 
             //Load ContextResources
             foreach (ContextResourcesAttribute r in type.GetCustomAttributes<ContextResourcesAttribute>())
-                Context.AddResourceData(Assembly.GetEntryAssembly(), r.Resources, r.Path);
+                Context.AddResourceData(EntryAssembly ?? Assembly.GetEntryAssembly(), r.Resources, r.Path);
 
             //Set size if specified
             AppSizeAttribute sizeAtt = type.GetCustomAttribute<AppSizeAttribute>();
@@ -175,7 +178,9 @@ namespace LogicReinc.WebApp
         //Loading
         public void LoadResource(string resource)
         {
-            LoadHtml(WebContext.LoadStringResource(Assembly.GetEntryAssembly(), resource));
+            //Workaround for some platforms
+            Assembly c = EntryAssembly ?? Assembly.GetEntryAssembly();
+            LoadHtml(WebContext.LoadStringResource(c, resource));
         }
         public void LoadHtml(string html)
         {

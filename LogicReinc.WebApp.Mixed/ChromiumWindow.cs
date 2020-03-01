@@ -25,7 +25,7 @@ namespace LogicReinc.WebApp.Mixed
         public event Func<string, Task<object>> OnIPC;
 
         public WebWindow Controller { get; set; }
-
+        
 
         private static string _polyfill = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Mixed.polyfill.js");
 
@@ -45,7 +45,7 @@ namespace LogicReinc.WebApp.Mixed
         {
             WebAppLogger.Log(WebAppLogLevel.Info, "Chromium Startup");
             _browserContainer.Dock = DockStyle.Fill;
-            _browser = new CefWebBrowser(this.Width, this.Height);
+            _browser = new CefWebBrowser(this, this.Width, this.Height);
             _browser.OnProcessMessage += ProcessMessage;
             _browser.BrowserReady += BrowserReady;
             _browser.BackColor = Color.DarkRed;

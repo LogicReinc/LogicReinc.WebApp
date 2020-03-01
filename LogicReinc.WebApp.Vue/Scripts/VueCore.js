@@ -15,6 +15,7 @@ var app = new Vue({{
 		{2}
 	}},
 	mounted(){{
+        console.log("Vue:Mounted");
 		evalJson = (js)=>{{
 			return function(str){{ 
 				return JSON.stringify(eval(str)) 

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LogicReinc.WebApp.Vue
@@ -17,7 +18,7 @@ namespace LogicReinc.WebApp.Vue
         private Dictionary<string, VueComponent> _components = new Dictionary<string, VueComponent>();
         private Dictionary<string, Type> _componentTypes = new Dictionary<string, Type>();
 
-        public VueWindow()
+        public VueWindow(IWebWindowImplementation window = null) : base(window)
         {
             bool requireExpose = false;
             
@@ -57,6 +58,14 @@ namespace LogicReinc.WebApp.Vue
                     _vueData.AsVueDataString(), base.IPCAvailable
                     .Select(x => $"'{x}':{x}")
                     .ToArray()));
+            }).ContinueWith((t) =>
+            {
+                AggregateException ex = t.Exception;
+                if(ex != null && ex.InnerExceptions.Count > 0)
+                {
+                    foreach (Exception x in ex.InnerExceptions)
+                        WebAppLogger.Log(WebAppLogLevel.Error, $"[{x.GetType().Name}]{x.Message}");
+                }
             });
         }
 
@@ -144,7 +153,7 @@ namespace LogicReinc.WebApp.Vue
                     .Select(x => $"{x.Name}: undefined").ToArray(),
                 VueComponent.GetVueMethods(compType, WebExposeType.All)
                     .Select(x => VueTemplates.Format_VueComponentCall(x.Name, x.GetCustomAttribute<VuePreventTickAttribute>() == null)).ToArray(),
-                WebContext.LoadStringResource(Assembly.GetEntryAssembly(), templateAtt.Resource));
+                WebContext.LoadStringResource(EntryAssembly ?? Assembly.GetEntryAssembly(), templateAtt.Resource));
 
         }
     }

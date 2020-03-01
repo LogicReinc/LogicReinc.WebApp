@@ -23,9 +23,12 @@ Thats it, Use WebWindows.SetManager() once and create your window class and html
 ## Platforms
 Supported platforms are completley dependent on your WindowManager implementation. In theory you can implement this framework on any browser with 2 way communication.
 Currently implemented in Mixed WindowManager:
-	- Windows 32bit : Microsoft Webview
-	- Windows 64bit : Microsft Webview / Chromium
-	- Linux 64bit : Chromium
+
+ - Windows 32bit : Microsoft Webview
+ - Windows 64bit : Microsft Webview / Chromium
+ - Linux 64bit : Chromium
+ - Android : Android Webview (likely chromium)
+	
 This list should expand quick, expect Android, Mac and other architectures such as ARM soon.
 
 ## Window Implementation
@@ -47,6 +50,8 @@ Other dependencies depend on your WindowManager:
  - Mixed (non-Chromium)
 	- CefGlue (for Linux)
 	- Microsoft WebView (for Windows)
+ - Android
+	(nothing, works using default Xamarin Android App)
 
 ## Security
 Due to the tight integration with C# it means that depending on your settings you may expose C# functions to your UI, thus be careful what code you trust in your UI.
@@ -66,7 +71,7 @@ static void Main(string[] args)
 	//Now you can create windows anywhere like this.
 	var myTestApp = new TestApp();
 	myTestApp.Show();'
-	...
+	..
 }
 ```
 
@@ -234,3 +239,15 @@ TestApp.Web.VueTestComp.html
 	</md-button>
 </div>
 ```
+
+
+## LogicReinc.WebApp.Android (Work-in-progress)
+Due to Android being fundamentally different than desktop windows, you require some different steps, but usage is nearly identical and you can still share classes with other operating systems if you like. The only difference would be the entrypoint.
+
+To use your WebWindow (or VueWindow) implementation, instead of using new WebWindow().Show(), you use 
+```C#
+	StartActivity(typeof(WebAppActivity<WebWindow>))
+```
+Besides that, there is no difference in usage. Some methods such as SetSize/Position etc will not do anything because they arent relevant and thus will always use full screen.
+
+You will also have to add a reference to Mono.Android.Export in your end-project.

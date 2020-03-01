@@ -13,6 +13,8 @@ namespace LogicReinc.WebApp
 
         WebWindow Controller { get; set; }
 
+        IntPtr Handle { get; }
+
         void Startup();
 
         void SetSize(int x, int y);
