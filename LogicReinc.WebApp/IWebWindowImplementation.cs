@@ -9,7 +9,7 @@ namespace LogicReinc.WebApp
 {
     public interface IWebWindowImplementation
     {
-        event Func<string, Task<object>> OnIPC;
+        event Action<string> OnIPC;
 
         WebWindow Controller { get; set; }
 
@@ -35,7 +35,7 @@ namespace LogicReinc.WebApp
 
         void BringToFront();
 
-        JToken Execute(string js);
+        void Execute(string js);
 
         void RegisterInitScript(string script);
 

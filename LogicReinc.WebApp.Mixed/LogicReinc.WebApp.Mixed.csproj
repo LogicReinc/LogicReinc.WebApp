@@ -129,9 +129,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="polyfill.js" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="IPCSetup.WebView.js" />
   </ItemGroup>
   <ItemGroup>
@@ -144,7 +141,6 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="IPCSetup.Chromium.js" />
-    <EmbeddedResource Include="ChromiumCall.js" />
     <Content Include="Xilium.CefGlue.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

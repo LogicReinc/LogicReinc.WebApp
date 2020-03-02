@@ -36,7 +36,14 @@ As stated before, the core libraries are completely .net standard and platform i
 A lightweight browser is already implemented and ready for use with the LogicReinc.WebApp.Mixed library. This provides several window implementations for Windows/Linux/Mac for Mono using different browsers depending on the operating system (for example, Windows uses Microsofts new WebView library with a  polyfill integrated).
 
 To implement your own window system you simply create a new library of any architecture that references LogicReinc.WebApp and implements IWindowManager and IWebWindow interfaces. And in your client application you pass an instance of the IWindowManager you created to the core library as seen in the example.
-NOTE: At current stage of the project implementation still requires very specific javascript injection.. Future prospects.
+To enable the IPC to work you will have to inject a javascript function like this:
+```javascript
+	function _IPC_send(str){
+		some.method.to.host(str);
+	}
+```
+And then pass the str value to the OnIPC event in the implemented interface.
+
 
 ## Limitations
 Through abstraction a lot of limitations can be alleviated. But the only core limitation is that all communication between C# and javascript will always have some delay for obvious reasons. Thus its best to limit it as much as possible. This IPC delay is completely dependent on the window implementation. But for example the Mixed implementation for Windows has a delay of about 1 to 5ms delay to fetch a javascript value from C#.

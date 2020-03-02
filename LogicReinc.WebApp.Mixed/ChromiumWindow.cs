@@ -22,15 +22,10 @@ namespace LogicReinc.WebApp.Mixed
         private bool _isReady = false;
 
         public event Action OnReady;
-        public event Func<string, Task<object>> OnIPC;
+        public event Action<string> OnIPC;
 
         public WebWindow Controller { get; set; }
         
-
-        private int _chromeRespCounter = 0;
-        private Dictionary<int, Action<JToken, JToken>> _chromeResps = new Dictionary<int, Action<JToken, JToken>>();
-
-
         public ChromiumWindow()
         {
             RegisterInitScript(WebAppTemplates.GetPolyfill());
@@ -61,54 +56,9 @@ namespace LogicReinc.WebApp.Mixed
 
         private bool ProcessMessage(CefProcessId pid, CefProcessMessage msg)
         {
-            string notify = msg.Arguments.GetString(4);
-
-            WebAppLogger.Log(WebAppLogLevel.Info, "IPC:" + notify);
-
-            if (notify.StartsWith("chrom:"))
-            {
-                JObject obj = JObject.Parse(notify.Substring("chrom:".Length));
-
-                if (obj.ContainsKey("id"))
-                {
-                    int id = obj.GetValue("id").ToObject<int>();
-                    if (_chromeResps.ContainsKey(id))
-                    {
-                        Action<JToken, JToken> cb = _chromeResps[id];
-                        _chromeResps.Remove(id);
-                        cb(obj.GetValue("result"), obj.GetValue("excp"));
-                    }
-                }
-
-                return true;
-            }
-            else
-            {
-                string id = notify.Substring(0, notify.IndexOf(":"));
-                notify = notify.Substring(notify.IndexOf(":") + 1);
-                
-                if (OnIPC != null)
-                    OnIPC(notify).ContinueWith((t) =>
-                    {
-                        object tr = t.Result;
-
-                        IPCObject obj = JsonConvert.DeserializeObject<IPCObject>(notify);
-
-                        WebAppLogger.Log(WebAppLogLevel.Verbose, "IPC: Finalizing");
-                        object result = obj.NoCallback ? new NoIPCResponse() : tr;
-
-                        if (result != null && result.GetType() == typeof(NoIPCResponse))
-                        {
-                            WebAppLogger.Log(WebAppLogLevel.Verbose, "IPC: No Response");
-                        }
-                        else if (!string.IsNullOrEmpty(id))
-                            Execute(WebAppTemplates.FormatIf(
-                                $"_IPCResolves[{id}]",
-                                $"_IPCResolves[{id}]({JsonConvert.SerializeObject(result)});"));
-
-                    });
-                return true;
-            }
+            if (OnIPC != null)
+                OnIPC(msg.Arguments.GetString(4));
+            return true;
         }
 
         private void BrowserReady()
@@ -187,68 +137,13 @@ namespace LogicReinc.WebApp.Mixed
                 _browser.Browser.GetMainFrame().LoadUrl(url);
             });
         }
-
-
-        static string chromCall = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Mixed.ChromiumCall.js");
-        public JToken Execute(string js)
+        
+        public void Execute(string js)
         {
-            
-            try
-            {
-                if (_browser.Browser == null)
-                    return null;
-                //string result = _jscontext.EvaluateScript("evalJson", js);
-
-                string ex = null;
-                JToken result = null;
-
-
-                int cbID = _chromeRespCounter++;
-                AutoResetEvent ev = new AutoResetEvent(false);
-                _chromeResps.Add(cbID, (res, excp) =>
-                {
-                    string calljs = js;
-                    if (excp != null)
-                        ex = excp.ToString();
-                    else
-                        result = res;
-                    ev.Set();
-                    
-                });
-                string call = String.Format(chromCall, js, cbID);//WebAppTemplates.FormatCall("evalJsonChrome", cbID, js);
-
-                _browser.Browser.GetMainFrame().ExecuteJavaScript(call, _browser.Browser.GetMainFrame().Url, 0);
-                ev.WaitOne();
-
-                if (ex != null)
-                    throw new Exception($"Javascript exception: {ex} \n@:" + js);
-
-                if (result == null)
-                    return null;
-                else
-                    return result;
-            }
-            catch (AggregateException ex)
-            {
-                if (ex.InnerExceptions.Count == 1)
-                {
-                    Exception ex1 = ex.InnerExceptions[0];
-                    if (ex1.Message.Contains("0x80020101"))
-                        throw new Exception("Exception in javascript..:\n" + js);
-                    else
-                        throw;
-                }
-                else
-                    throw;
-            }
-            catch
-            {
-                string calljs = js;
-                throw;
-            }
+            if (_browser.Browser == null)
+                throw new InvalidOperationException("Browser not ready");
+            _browser.Browser.GetMainFrame().ExecuteJavaScript(js, _browser.Browser.GetMainFrame().Url, 0);
         }
-
-
 
         protected override void OnClosed(EventArgs e)
         {

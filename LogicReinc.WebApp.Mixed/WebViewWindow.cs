@@ -21,7 +21,7 @@ namespace LogicReinc.WebApp.Mixed
         private bool _needCleanup = true;
         private WebView _browser = null;
 
-        public event Func<string, Task<object>> OnIPC;
+        public event Action<string> OnIPC;
 
         public WebWindow Controller { get; set; }
         
@@ -36,6 +36,9 @@ namespace LogicReinc.WebApp.Mixed
             _browser.AddInitializeScript(WebAppTemplates.GetPolyfill());
             _browser.ScriptNotify += async (sender, wsn) =>
             {
+                if (OnIPC != null)
+                    OnIPC(wsn.Value);
+                /*
                 string notify = wsn.Value;
                 string id = notify.Substring(0, notify.IndexOf(":"));
                 notify = notify.Substring(notify.IndexOf(":") + 1);
@@ -59,6 +62,7 @@ namespace LogicReinc.WebApp.Mixed
                     Execute(WebAppTemplates.FormatIf(
                         $"_IPCResolves[{id}]",
                         $"_IPCResolves[{id}]({JsonConvert.SerializeObject(result)});"));
+                */
             };
             this.FormClosing += (a, b) =>
             {
@@ -138,34 +142,9 @@ namespace LogicReinc.WebApp.Mixed
             _browser.Navigate(url);
         }
 
-        public JToken Execute(string js)
+        public void Execute(string js)
         {
-            try
-            {
-                string result = _browser.InvokeScript("evalJson", js);
-
-                if (string.IsNullOrEmpty(result))
-                    return null;
-                else
-                    return JToken.Parse(result);
-            }
-            catch(AggregateException ex)
-            {
-                if (ex.InnerExceptions.Count == 1)
-                {
-                    Exception ex1 = ex.InnerExceptions[0];
-                    if (ex1.Message.Contains("0x80020101"))
-                        throw new Exception("Exception in javascript..:\n" + js);
-                    else
-                        throw;
-                }
-                else 
-                    throw;
-            }
-            catch
-            {
-                throw;
-            }
+            _browser.InvokeScript("eval", new string[] { js });
         }
 
         public void SetPosition(int x, int y)

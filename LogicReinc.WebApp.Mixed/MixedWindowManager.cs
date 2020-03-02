@@ -269,12 +269,13 @@ namespace LogicReinc.WebApp.Mixed
                     window.Size = new System.Drawing.Size(0, 0);
                     window.HandleCreated += (a, b) =>
                     {
+                        window.Hide();
+                        window.Opacity = 1;
                         ev.Set();
                     };
                     window.Opacity = 0;
                     window.Show();
-                    window.Hide();
-                    window.Opacity = 1;
+
                     window.FormBorderStyle = obs;
                 }
                 catch (Exception ex)

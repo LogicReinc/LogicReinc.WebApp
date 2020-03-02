@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using LogicReinc.WebApp.Javascript;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,8 @@ namespace LogicReinc.WebApp
     public static class WebAppTemplates
     {
         public static string Template_SafeEvalJsonCall { get; } = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Scripts.SafeEvalJsonCall.js");
+        public static string Template_SafeEvalJsonCall2 { get; } = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Scripts.SafeEvalJsonCall2.js");
+        public static string Template_IPCSetup { get; } = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Scripts.IPCSetup.js");
         public static string Template_WebWindowBase { get; } = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Scripts.WebWindowBase.js");
         public static string Template_IPC { get; } = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Scripts.WebWindow.IPC.js");
         public static string Template_Function { get; } = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Scripts.Function.js");
@@ -39,17 +42,38 @@ namespace LogicReinc.WebApp
         {
             return string.Format(Template_SafeEvalJsonCall, js);
         }
+        public static string Format_SafeEvalJsonCall2(int id, string js)
+        {
+            return string.Format(Template_SafeEvalJsonCall2, id, js);
+        }
 
+        public static string Format_WebWindowIPC()
+        {
+            return string.Format(Template_IPCSetup);
+        }
         public static string Format_WebWindowBase(string onload)
         {
             return string.Format(Template_WebWindowBase, onload);
         }
 
-        public static string FormatIPC<T>(T obj) where T : IPCObject
+        public static string FormatIPC<T>(T obj) where T : IPCObjectBase 
         {
+            if(obj.GetType() == typeof(IPCObject2))
+            {
+                IPCObject2 obj2 = (IPCObject2)(IPCObjectBase)obj;
+                if (obj2.Arguments == null)
+                    obj2.Arguments = new object[0];
+                else if (obj2.Arguments is JavascriptReference)
+                {
+                    if (((JavascriptReference)obj2.Arguments).Reference == "arguments")
+                        ((JavascriptReference)obj2.Arguments).Reference = "[].slice.call(arguments)";
+                }
+                else if (!obj2.Arguments.GetType().IsArray)
+                    obj2.Arguments = new object[] { obj2.Arguments };
+            }
             return string.Format(Template_IPC, JsonConvert.SerializeObject(obj));
         }
-        public static string FormatIPCFunction<T>(string name, T obj) where T : IPCObject
+        public static string FormatIPCFunction<T>(string name, T obj) where T : IPCObjectBase
         {
             return FormatFunction(name, "return " + FormatIPC(obj));
         }

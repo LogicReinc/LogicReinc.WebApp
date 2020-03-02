@@ -5,6 +5,6 @@
         component: this._comp.id,
         function: '{0}',
         tick: {1},
-        arguments: arguments
+        arguments: [].slice.call(arguments)
     }});
 }}

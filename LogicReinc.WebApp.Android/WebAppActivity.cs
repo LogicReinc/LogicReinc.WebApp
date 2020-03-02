@@ -28,7 +28,7 @@ namespace LogicReinc.WebApp.Android
 
         public WebWindow Controller { get; set; }
 
-        public event Func<string, Task<object>> OnIPC;
+        public event Action<string> OnIPC;
 
         WebView _view = null;
         
@@ -69,59 +69,16 @@ namespace LogicReinc.WebApp.Android
 
         public object HandleIPC(string msg)
         {
-            string notify = msg;
-            string id = notify.Substring(0, notify.IndexOf(":"));
-            notify = notify.Substring(notify.IndexOf(":") + 1);
-
-            
             if (OnIPC != null)
-                OnIPC(notify).ContinueWith((t) =>
-                {
-                    object r = t.Result;
-
-
-                    if (r != null && r.GetType() == typeof(NoIPCResponse))
-                        return;
-
-                    if (!string.IsNullOrEmpty(id))
-                        Execute(WebAppTemplates.FormatIf(
-                            $"_IPCResolves[{id}]",
-                            $"_IPCResolves[{id}]({JsonConvert.SerializeObject(r)});"));
-
-                });
+                OnIPC(msg);
             return null;
         }
 
 
 
-        public JToken Execute(string js)
+        public void Execute(string js)
         {
-            AutoResetEvent ev = new AutoResetEvent(false);
-            Java.Lang.Object result = null;
-            System.Exception ex = null;
-
-            string call = WebAppTemplates.Format_SafeEvalJsonCall(js);
-            RunOnUiThread(() =>
-            {
-                try
-                {
-                    _view.EvaluateJavascript(call, new JSCallback(this, (obj) =>
-                    {
-                        result = obj;
-                        ev.Set();
-                    }));
-                }
-                catch (System.Exception x)
-                {
-                    ex = x;
-                }
-            });
-
-            ev.WaitOne();
-
-            if (ex != null)
-                throw new System.Exception("Exception:" + ex.Message);
-            return JToken.Parse(result.ToString());
+            RunOnUiThread(() => _view.EvaluateJavascript(js, null));
         }
 
         public void LoadHtml(string html)

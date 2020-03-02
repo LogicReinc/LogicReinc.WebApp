@@ -12,7 +12,7 @@ namespace TestApp
     {
         static bool _launched = false;
 
-        static bool forceChromium = false;
+        static bool forceChromium = true;
 
         [STAThread]
         static void Main(string[] args)

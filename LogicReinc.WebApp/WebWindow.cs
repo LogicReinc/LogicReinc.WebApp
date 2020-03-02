@@ -23,7 +23,11 @@ namespace LogicReinc.WebApp
 
         private Dictionary<string, Func<JToken[], object>> _ipcAvailable = null;
 
+        private int _exeCallbackCounter = 0;
+        private Dictionary<int, Action<string>> _exeCallbacks = new Dictionary<int, Action<string>>();
+
         private List<(string, Action<JToken, Exception>)> _jsStartupQueue = new List<(string, Action<JToken, Exception>)>();
+
 
         public string[] IPCAvailable => _ipcAvailable?.Select(x => x.Key).ToArray() ?? new string[] { };
 
@@ -49,6 +53,7 @@ namespace LogicReinc.WebApp
             WebAppLogger.Log(WebAppLogLevel.Info, "Window Created");
             Window.OnIPC += OnIPC;
             Loaded += OnReady;
+            Window.RegisterInitScript(WebAppTemplates.Format_WebWindowIPC());
             MapIPC();
             Initializing();
             Window.Invoke(() =>
@@ -61,7 +66,7 @@ namespace LogicReinc.WebApp
             Type type = GetType();
 
             JS = new JSPassthrough(this);
-            
+
             Window.RegisterInitScript(WebAppTemplates.Format_WebWindowBase(CSCallback((args) =>
             {
                 WebAppLogger.Log(WebAppLogLevel.Info, "Initializing..");
@@ -103,9 +108,27 @@ namespace LogicReinc.WebApp
         }
 
 
-        public JToken Execute(string js)
+        public JToken Execute(string js, int timeout = 1000)
         {
-            return Window.Execute(js); ;
+            int id = _exeCallbackCounter++;
+            string result = null;
+            AutoResetEvent ev = new AutoResetEvent(false);
+            _exeCallbacks.Add(id, (str) =>
+            {
+                _exeCallbacks.Remove(id);
+                result = str;
+                ev.Set();
+            });
+            //Window.Invoke(() => Window.Execute(js));
+            Window.Execute(WebAppTemplates.Format_SafeEvalJsonCall2(id, js));
+
+
+            if (!ev.WaitOne(timeout))
+                throw new TimeoutException($"Javascript didn't respond within [{timeout}] ms to \n{js}");
+
+            if (result == null || result == "")
+                return null;
+            return JToken.Parse(result);
         }
 
 
@@ -206,12 +229,12 @@ namespace LogicReinc.WebApp
             if (function.Any(x => !char.IsLetter(x) && x != '_'))
                 throw new ArgumentException("Only letters allowed in function name");
 
-            Window.RegisterInitScript(WebAppTemplates.FormatIPCFunction(function, new IPCObject()
+            Window.RegisterInitScript(WebAppTemplates.FormatIPCFunction(function, new IPCObject2()
             {
                 Type = "callback",
                 DebugName = function,
                 ID = RegisterCallback(cb, false),
-                Arguments = new JavascriptReference("arguments"),
+                Arguments = new JavascriptReference("[].slice.call(arguments)"),
                 NoCallback = !hasCallback
             }));
         }
@@ -263,53 +286,73 @@ namespace LogicReinc.WebApp
 
         }
 
-        private async Task<object> OnIPC(string notify)
+        private void OnIPC(string notify)
         {
-
-            Task<object> t = Task.Run(() =>
+            WebAppLogger.Log(WebAppLogLevel.Verbose, notify);
+            Task t = Task.Run(() =>
             {
-                JObject obj = JObject.Parse(notify);
-                if (obj.ContainsKey("type"))
-                {
-                    string type = obj.GetValue("type").ToString();
-                    JToken[] objs = obj.GetValue("arguments").ToArray();
+                JObject objj = JObject.Parse(notify);
+                IPCObject obj = JsonConvert.DeserializeObject<IPCObject>(notify);
 
-                    switch (type)
-                    {
-                        case "callback":
-                            WebAppLogger.Log(WebAppLogLevel.Info, "IPC: Callback");
-                            string id = obj.GetValue("id").ToString();
-                            object cbResult = TriggerCallback(id, objs);
-                            return cbResult;
-                        case "ipc":
-                            WebAppLogger.Log(WebAppLogLevel.Info, "IPC: Passthrough");
-                            string function = obj.GetValue("function").ToString();
-                            return OnIPCCall(function, objs);
-                        case "error":
-                            WebAppLogger.Log(WebAppLogLevel.Info, "IPC: Error");
-                            JObject errObj = objs[0].ToObject<JObject>();
-                            OnScriptError(
-                                errObj.GetValue("line").ToObject<int>(),
-                                errObj.GetValue("col").ToObject<int>(),
-                                errObj.GetValue("error").ToString(),
-                                (errObj.ContainsKey("stack")) ?
-                                    errObj.GetValue("stack").ToString() :
-                                    "");
-                            break;
-                        case "log":
-                            JObject logObj = objs[0].ToObject<JObject>();
-                            Console.WriteLine($"Log:{logObj.GetValue("msg").ToString()}");
-                            break;
-                        default:
-                            object result = null;
-                            if (HandleIPC(type, obj, out result))
-                                return result;
-                            break;
-                    }
+                object result = null;
+                switch (obj.Type)
+                {
+                    case "response":
+                        WebAppLogger.Log(WebAppLogLevel.Info, "IPC: Response");
+                        int rid = int.Parse(obj.ID);
+                        if (_exeCallbacks.ContainsKey(rid))
+                        {
+                            var act = _exeCallbacks[rid];
+                            _exeCallbacks.Remove(rid);
+                            act(obj.GetArguments()[0].ToString());
+                        }
+                        break;
+                    case "callback":
+                        WebAppLogger.Log(WebAppLogLevel.Info, "IPC: Callback");
+                        string id = obj.ID;
+                        result = TriggerCallback(id, obj.GetArguments());
+                        break;
+                    case "ipc":
+                        WebAppLogger.Log(WebAppLogLevel.Info, "IPC: Passthrough");
+                        result = OnIPCCall(obj.Function, obj.GetArguments());
+                        break;
+                    case "error":
+                        WebAppLogger.Log(WebAppLogLevel.Info, "IPC: Error");
+                        JObject errObj = (JObject)obj.GetArguments()[0];
+                        OnScriptError(
+                            errObj.GetValue("line").ToObject<int>(),
+                            errObj.GetValue("col").ToObject<int>(),
+                            errObj.GetValue("error").ToString(),
+                            (errObj.ContainsKey("stack")) ?
+                                errObj.GetValue("stack").ToString() :
+                                "");
+                        break;
+                    case "log":
+                        JObject logObj = (JObject)obj.GetArguments()[0];
+                        Console.WriteLine($"Log:{logObj.GetValue("msg").ToString()}");
+                        break;
+                    default:
+                        result = null;
+                        WebAppLogger.Log(WebAppLogLevel.Info, $"IPC: Custom [{obj.Type}]");
+                        if (HandleIPC(obj.Type, objj, out result))
+                            return result;
+                        break;
                 }
+
+                result = obj.NoCallback ? new NoIPCResponse() : result;
+
+                if (result != null && result.GetType() == typeof(NoIPCResponse))
+                {
+                    WebAppLogger.Log(WebAppLogLevel.Verbose, "IPC: No Response");
+                }
+                else if (obj.Callback > 0)
+                    Execute(WebAppTemplates.FormatIf(
+                        $"_IPCResolves[{obj.Callback}]",
+                        $"_IPCResolves[{obj.Callback}]({JsonConvert.SerializeObject(result)});"));
+
+
                 return null;
             });
-            return await t;
         }
         protected virtual object OnIPCCall(string function, JToken[] arguments)
         {
@@ -390,7 +433,7 @@ namespace LogicReinc.WebApp
 
         public string CSCallback(Func<JToken[], object> callback, bool repeatable = false, string debugName = null, params string[] arguments)
         {
-            return WebAppTemplates.FormatIPC(new IPCObject()
+            return WebAppTemplates.FormatIPC(new IPCObject2()
             {
                 DebugName = debugName,
                 Type = "callback",
@@ -474,7 +517,7 @@ namespace LogicReinc.WebApp
                     return _existsObjectCache[name];
                 }
                 else
-                    return (Parent.Window.Execute($"(typeof {name} == 'undefined')")).ToObject<bool>();
+                    return (Parent.Execute($"(typeof {name} == 'undefined')")).ToObject<bool>();
             }
             public async Task<bool> CanCall(string name)
             {
@@ -485,7 +528,7 @@ namespace LogicReinc.WebApp
                     return _existsFunctionCache[name];
                 }
                 else
-                    return (Parent.Window.Execute($"(typeof {name} == 'function')")).ToObject<bool>();
+                    return (Parent.Execute($"(typeof {name} == 'function')")).ToObject<bool>();
             }
 
 
@@ -493,7 +536,7 @@ namespace LogicReinc.WebApp
             {
                 if (ParentPath != null)
                 {
-                    JToken result = Parent.Window.Execute(ParentPath);
+                    JToken result = Parent.Execute(ParentPath);
                     return result;
                 }
                 else

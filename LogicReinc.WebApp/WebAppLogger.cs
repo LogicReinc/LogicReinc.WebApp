@@ -6,7 +6,7 @@ namespace LogicReinc.WebApp
 {
     public static class WebAppLogger
     {
-        public static WebAppLogLevel Level { get; set; } = WebAppLogLevel.Verbose;
+        public static WebAppLogLevel Level { get; set; } = WebAppLogLevel.Info;
         public static bool Print { get; set; } = true;
 
         public static event Action<WebAppLogLevel, string> OnLog;
