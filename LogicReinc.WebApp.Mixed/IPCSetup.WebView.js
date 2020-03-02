@@ -1,5 +1,6 @@
 ﻿var _IPCCounter = 0;
-var _IPCResolves = {{}};
+var _IPCResolves = {{ }};
+
 function _IPC(obj){{
     var newID = _IPCCounter++;
     obj.respid = newID;

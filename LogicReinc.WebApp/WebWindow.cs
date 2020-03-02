@@ -337,6 +337,12 @@ namespace LogicReinc.WebApp
                 {
                     int start = Math.Max(collumn - 50, 0);
                     int end = Math.Min(errLine.Length, collumn + 50) - start;
+
+                    int shortStart = Math.Max(collumn - 5, 0);
+                    int shortEnd = Math.Min(errLine.Length, collumn + 5) - shortStart;
+                    string shortErr = errLine.Substring(shortStart, shortEnd);
+
+                    
                     errLine = errLine.Substring(start,end);
                 }
                 Console.ForegroundColor = ConsoleColor.DarkRed;

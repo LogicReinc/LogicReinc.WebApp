@@ -8,12 +8,14 @@
   <ItemGroup>
     <None Remove="Scripts\Function.js" />
     <None Remove="Scripts\IPCSetup.js" />
+    <None Remove="Scripts\polyfill.js" />
     <None Remove="Scripts\SafeEvalJSonCall.js" />
     <None Remove="Scripts\WebWindow.IPC.js" />
     <None Remove="Scripts\WebWindowBase.js" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Scripts\polyfill.js" />
     <EmbeddedResource Include="Scripts\SafeEvalJsonCall.js" />
   </ItemGroup>
 

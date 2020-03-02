@@ -27,16 +27,13 @@ namespace LogicReinc.WebApp.Mixed
         public WebWindow Controller { get; set; }
         
 
-        private static string _polyfill = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Mixed.polyfill.js");
-
-
         private int _chromeRespCounter = 0;
         private Dictionary<int, Action<JToken, JToken>> _chromeResps = new Dictionary<int, Action<JToken, JToken>>();
 
 
         public ChromiumWindow()
         {
-            RegisterInitScript(_polyfill);
+            RegisterInitScript(WebAppTemplates.GetPolyfill());
             RegisterInitScript(string.Format(WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Mixed.IPCSetup.Chromium.js")));
 
         }

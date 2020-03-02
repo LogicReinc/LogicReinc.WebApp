@@ -23,8 +23,6 @@ namespace LogicReinc.WebApp.Android
     [Activity]
     public class WebAppActivity<T> : Activity, IWebWindowImplementation, IWebAppActivity where T : WebWindow
     {
-        private static string _polyfill = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Android.polyfill.js");
-
         private FieldInfo _lastHtmlField = typeof(WebWindow).GetField("_lastLoadedHtml", BindingFlags.Instance | BindingFlags.NonPublic);
 
 
@@ -45,7 +43,7 @@ namespace LogicReinc.WebApp.Android
         {
             base.OnCreate(savedInstanceState);
 
-            //_criticalScripts.Add(_polyfill);
+            _initScripts.Add(WebAppTemplates.GetPolyfill());
             _initScripts.Add(string.Format(WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Android.Scripts.IPCSetup.Android.js")));
 
             _view = new WebView(this);
@@ -75,26 +73,23 @@ namespace LogicReinc.WebApp.Android
             string id = notify.Substring(0, notify.IndexOf(":"));
             notify = notify.Substring(notify.IndexOf(":") + 1);
 
-
-            Task<object> resultT = null;
+            
             if (OnIPC != null)
-                resultT = OnIPC(notify);
-
-            if (resultT == null)
-                return null;
-
-            resultT.Wait();
-            object result = resultT.Result;//.Result;
+                OnIPC(notify).ContinueWith((t) =>
+                {
+                    object r = t.Result;
 
 
-            if (result != null && result.GetType() == typeof(NoIPCResponse))
-                return null;
+                    if (r != null && r.GetType() == typeof(NoIPCResponse))
+                        return;
 
-            if (!string.IsNullOrEmpty(id))
-                Execute(WebAppTemplates.FormatIf(
-                    $"_IPCResolves[{id}]",
-                    $"_IPCResolves[{id}]({JsonConvert.SerializeObject(result)});"));
-            return result ;
+                    if (!string.IsNullOrEmpty(id))
+                        Execute(WebAppTemplates.FormatIf(
+                            $"_IPCResolves[{id}]",
+                            $"_IPCResolves[{id}]({JsonConvert.SerializeObject(r)});"));
+
+                });
+            return null;
         }
 
 
@@ -102,22 +97,26 @@ namespace LogicReinc.WebApp.Android
         public JToken Execute(string js)
         {
             AutoResetEvent ev = new AutoResetEvent(false);
-            System.Exception ex = null;
             Java.Lang.Object result = null;
-            string call = js;//WebAppTemplates.Format_SafeEvalJsonCall(js);
-            RunOnUiThread(() => {
+            System.Exception ex = null;
+
+            string call = WebAppTemplates.Format_SafeEvalJsonCall(js);
+            RunOnUiThread(() =>
+            {
                 try
                 {
                     _view.EvaluateJavascript(call, new JSCallback(this, (obj) =>
-                      {
-                          result = obj;
-                          ev.Set();
-                      }));
-                  }
-                catch (System.Exception x) {
+                    {
+                        result = obj;
+                        ev.Set();
+                    }));
+                }
+                catch (System.Exception x)
+                {
                     ex = x;
                 }
             });
+
             ev.WaitOne();
 
             if (ex != null)
@@ -226,7 +225,9 @@ namespace LogicReinc.WebApp.Android
         [JavascriptInterface]
         public string onIPC(string msg)
         {
-            return JsonConvert.SerializeObject(_act.HandleIPC(msg));
+            _act.HandleIPC(msg);
+            return null;
+            //return JsonConvert.SerializeObject(_act.HandleIPC(msg));
         }
     }
 }

@@ -16,6 +16,8 @@ namespace LogicReinc.WebApp
         public static string Template_If { get; } = "if({0}){{ {1} }}";
         public static string Template_Call { get; } = "{0}({1})";
 
+        public static string Template_Polyfill { get; } = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Scripts.polyfill.js");
+
         public static string FormatFunction(string name, string body)
         {
             return FormatFunction(name, new string[] { }, body);
@@ -50,6 +52,11 @@ namespace LogicReinc.WebApp
         public static string FormatIPCFunction<T>(string name, T obj) where T : IPCObject
         {
             return FormatFunction(name, "return " + FormatIPC(obj));
+        }
+
+        public static string GetPolyfill()
+        {
+            return Template_Polyfill;
         }
     }
 }

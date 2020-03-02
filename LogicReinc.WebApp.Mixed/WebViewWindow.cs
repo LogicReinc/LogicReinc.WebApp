@@ -24,9 +24,7 @@ namespace LogicReinc.WebApp.Mixed
         public event Func<string, Task<object>> OnIPC;
 
         public WebWindow Controller { get; set; }
-
-        private static string _polyfill = WebContext.LoadStringResource(Assembly.GetExecutingAssembly(), "LogicReinc.WebApp.Mixed.polyfill.js");
-
+        
         
         public WebViewWindow()
         {
@@ -35,7 +33,7 @@ namespace LogicReinc.WebApp.Mixed
             _browser.IsJavaScriptEnabled = true;
             _browser.IsScriptNotifyAllowed = true;
 
-            _browser.AddInitializeScript(_polyfill);
+            _browser.AddInitializeScript(WebAppTemplates.GetPolyfill());
             _browser.ScriptNotify += async (sender, wsn) =>
             {
                 string notify = wsn.Value;
